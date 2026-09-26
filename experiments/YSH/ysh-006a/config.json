@@ -1,0 +1,224 @@
+{
+  "experiment": "YSH-006A",
+  "device": "CPU",
+  "threads": 4,
+  "raw_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "dictionary_sha256": "c5e1635cb81a44510e146cf71bd78321272cc28208ce26835586340309e2ba43",
+  "reference_last_date": "2020-03-31",
+  "conditions": [
+    "all",
+    "unique4",
+    "controlled100"
+  ],
+  "reference_scopes": [
+    "train",
+    "full"
+  ],
+  "tail_quantiles": [
+    0.1,
+    0.05
+  ],
+  "primary": {
+    "condition": "all",
+    "reference": "train",
+    "tail": 0.1,
+    "target": "count"
+  },
+  "quantile_method": "linear",
+  "ddof": 0,
+  "minimum_correlation_dates": 5,
+  "minimum_candidate_dates": 7,
+  "minimum_rho": 0.5,
+  "minimum_loo_sign_fraction": 0.8,
+  "influential_loo_absolute_rho": 0.2,
+  "normalized_target": "1000*count/original_daily_records",
+  "candidates": [
+    {
+      "id": "T1_P__high_share",
+      "type": 1,
+      "metric": "P__high_share",
+      "category": "high_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_E__high_share",
+      "type": 1,
+      "metric": "E__high_share",
+      "category": "high_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_H__high_share",
+      "type": 1,
+      "metric": "H__high_share",
+      "category": "high_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_F__high_share",
+      "type": 1,
+      "metric": "F__high_share",
+      "category": "high_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_highF_highE",
+      "type": 1,
+      "metric": "highF_highE",
+      "category": "joint_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_I__mad",
+      "type": 1,
+      "metric": "I__mad",
+      "category": "dispersion",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_I__jump_share",
+      "type": 1,
+      "metric": "I__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_P__mad",
+      "type": 1,
+      "metric": "P__mad",
+      "category": "dispersion",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_P__jump_share",
+      "type": 1,
+      "metric": "P__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_R__mad",
+      "type": 1,
+      "metric": "R__mad",
+      "category": "dispersion",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T1_R__jump_share",
+      "type": 1,
+      "metric": "R__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_I__low_share",
+      "type": 2,
+      "metric": "I__low_share",
+      "category": "low_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_E__low_share",
+      "type": 2,
+      "metric": "E__low_share",
+      "category": "low_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_H__low_share",
+      "type": 2,
+      "metric": "H__low_share",
+      "category": "low_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_E_F__low_share",
+      "type": 2,
+      "metric": "E_F__low_share",
+      "category": "low_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_H_F__low_share",
+      "type": 2,
+      "metric": "H_F__low_share",
+      "category": "low_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_highF_lowE",
+      "type": 2,
+      "metric": "highF_lowE",
+      "category": "joint_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T2_highF_lowH",
+      "type": 2,
+      "metric": "highF_lowH",
+      "category": "joint_tail",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_V__p90",
+      "type": 3,
+      "metric": "V__p90",
+      "category": "upper_quantile",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_R__p90",
+      "type": 3,
+      "metric": "R__p90",
+      "category": "upper_quantile",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_E__p90",
+      "type": 3,
+      "metric": "E__p90",
+      "category": "upper_quantile",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_H__p90",
+      "type": 3,
+      "metric": "H__p90",
+      "category": "upper_quantile",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_V__jump_share",
+      "type": 3,
+      "metric": "V__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_R__jump_share",
+      "type": 3,
+      "metric": "R__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    },
+    {
+      "id": "T3_E__jump_share",
+      "type": 3,
+      "metric": "E__jump_share",
+      "category": "instability",
+      "expected_direction": "positive"
+    }
+  ],
+  "formulas": {
+    "F": "raw pressure(bar)",
+    "I": "raw current(kA)",
+    "V": "raw voltage(V)",
+    "t": "raw current-on duration(ms)",
+    "P": "V*(1000*I)",
+    "E": "V*(1000*I)*(t/1000)",
+    "H": "(1000*I)^2*(t/1000)",
+    "R": "V/(1000*I)",
+    "E_F": "E/F",
+    "H_F": "H/F"
+  }
+}

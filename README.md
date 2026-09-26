@@ -32,7 +32,7 @@ EDA / PREPROCESSING / FEATURE / ML / DL / VALIDATION / ERROR_ANALYSIS 등은 **�
 
 - `main`에 직접 작업하거나 push하지 않고 작업 브랜치와 PR을 사용합니다.
 - 원본 데이터, 비밀값, 대용량 파일을 commit하지 않습니다. `.gitignore`만 믿지 말고 staged diff를 확인합니다.
-- 실행 환경 및 라이브러리: TODO. `requirements.txt`에는 아직 패키지를 지정하지 않았습니다.
+- 실행 환경: `uv`로 관리하는 공용 `.venv` (Python 3.13, CPU). `requirements.in` → `requirements.txt`. [설정·실행 안내](docs/environment.md).
 - 대회명·공식 자료·목표·일정: TODO → `docs/project_overview.md`
 - 데이터 수령·구조·사용 조건: TODO → `data/README.md`, `docs/data_dictionary.md`
 - 평가 지표·검증 설계·Baseline: TODO → `docs/validation_strategy.md`

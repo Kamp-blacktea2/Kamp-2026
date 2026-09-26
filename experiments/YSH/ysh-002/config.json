@@ -1,0 +1,22 @@
+{
+  "raw": "F:/Kamp/data/Welding_Data_Set_01.xlsx",
+  "expected_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "repeat_table": "F:/Kamp/experiments/YSH/ysh-001/outputs/exact_repeated_blocks.csv",
+  "max_lag": 1000,
+  "min_pairs": 100,
+  "repeat_thresholds": [
+    50,
+    100,
+    200
+  ],
+  "change_windows": [
+    20,
+    50
+  ],
+  "change_thresholds": [
+    2,
+    3,
+    4
+  ],
+  "output_style": "Detailed Markdown tables; no default figures or HTML"
+}

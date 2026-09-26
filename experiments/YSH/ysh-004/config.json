@@ -1,0 +1,11 @@
+{
+  "raw": "F:/Kamp/data/Welding_Data_Set_01.xlsx",
+  "expected_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "segments": "../ysh-003/outputs/tables/segments.csv",
+  "partitions": "../ysh-003/outputs/tables/partitions.csv",
+  "previous_pairs": "../ysh-003/outputs/tables/selected_pair_details.csv",
+  "previous_scan": "../ysh-003/outputs/tables/motif_scan.csv",
+  "previous_exact_blocks": "../ysh-001/outputs/exact_repeated_blocks.csv",
+  "seed": 42,
+  "threads": 4
+}

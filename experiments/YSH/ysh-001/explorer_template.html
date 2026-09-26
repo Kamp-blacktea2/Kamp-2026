@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>YSH-001 용접 기록 분석</title>
+<script src="plotly.min.js">
+</script>
+<style>
+body {
+    font: 15px system-ui;
+    margin: 24px;
+    background: #f6f8fa;
+    color: #18232e
+}
+
+h1 {
+    font-size: 25px
+}
+
+select, input, button {
+    padding: 8px;
+    margin: 5px;
+    border: 1px solid #a9b6c4;
+    border-radius: 5px
+}
+
+nav {
+    position: sticky;
+    top: 0;
+    background: #eef3f8;
+    padding: 10px;
+    z-index: 3
+}
+
+#plots>div {
+    background: white;
+    margin: 18px 0;
+    border: 1px solid #dee5ec
+}
+
+#info {
+    padding: 12px;
+    background: white;
+    line-height: 1.6
+}
+
+p {
+    max-width: 1100px
+}
+</style>
+<h1>YSH 첫 번째 실험 · 용접 기록 분석</h1>
+<p>가로축은 기록 순서입니다. 실제 경과시간·제품 수로 확정하지 않습니다. A는 파일 순서, B는 날짜·생산순번 정렬 후보입니다. dedup은 길이 100건 이상인 동일 연속 블록의 뒤쪽 출현을 제외한 민감도 조건이며, 최종 정제 데이터가 아닙니다.</p>
+<nav>
+<label>조건 <select id="condition">
+</select>
+</label>
+<label>연속 구간 <select id="segment">
+</select>
+</label>
+<br>
+<label>분석 <select id="mode">
+<option value="blocks">비중첩 구간 (모든 블록)</option>
+<option value="nested">100건 안의 20건 5구간</option>
+<option value="rolling">이동창 기준·변동성·편차</option>
+<option value="expanded">200·500건 확대</option>
+</select>
+</label>
+<label>길이 <select id="size">
+<option>20</option>
+<option>50</option>
+<option>100</option>
+<option>200</option>
+<option>500</option>
+</select>
+</label>
+<label>시작점 이동 <select id="offset">
+<option value="0">0건</option>
+<option value="10">10건 (민감도)</option>
+</select>
+</label>
+<label>페이지/블록 <input id="page" type="number" min="1" value="1" style="width:65px">
+</label>
+<button id="prev">이전</button>
+<button id="next">다음</button>
+<button id="draw">보기</button>
+</nav>
+<p id="info">
+</p>
+<main id="plots">
+</main><script>
+const D = __DATA__;
+const $ = id => document.getElementById(id),
+    names = ['가압력 (bar)', '전류 (kA)', '전압 (V)', '통전시간 (ms)'],
+    colors = ['#247ba0', '#dd6e42', '#3e885b', '#775da6'];
+Object.keys(D).forEach(x => $('condition').add(new Option(x, x)));
+
+function fill() {
+    $('segment').innerHTML = '';
+    D[$('condition').value].forEach((s, i) => $('segment').add(new Option(
+        `${s.id} · ${s.date} · ${s.values.length}건`, i)));
+    $('page').value = 1;
+    render()
+}
+
+function trace(y, name, x, color) {
+    return {
+        x: x || y.map((_, i) => i + 1),
+        y,
+        name,
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+            width: 1.2,
+            color
+        },
+        connectgaps: false
+    }
+}
+
+function chart(title, traces, height = 800, rows = 4, cols = 1, ranges = null) {
+    let el = document.createElement('div');
+    $('plots').appendChild(el);
+    let layout = {
+        title: {
+            text: title,
+            font: {
+                size: 15
+            }
+        },
+        height,
+        margin: {
+            t: 70,
+            b: 50,
+            l: 75,
+            r: 35
+        },
+        grid: {
+            rows,
+            columns: cols,
+            pattern: 'independent'
+        },
+        showlegend: false
+    };
+    traces.forEach(t => {
+        let ix = t.panel || 0;
+        delete t.panel;
+        t.xaxis = 'x' + (ix ? ix + 1 : '');
+        t.yaxis = 'y' + (ix ? ix + 1 : '')
+    });
+    for (let i = 0; i < rows * cols; i++) {
+        layout['yaxis' + (i ? i + 1 : '')] = {
+            title: {
+                text: cols === 1 ? names[i % 4] : (i % cols === 0 ? names[Math.floor(i /
+                    cols)] : '')
+            },
+            range: ranges ? ranges[Math.floor(i / cols)] : undefined
+        };
+        layout['xaxis' + (i ? i + 1 : '')] = {
+            title: {
+                text: '기록 순서'
+            }
+        };
+    }
+    if (title.startsWith('100건 전체')) {
+        layout.shapes = [];
+        for (let j = 0; j < 4; j++)
+            for (let k = 1; k < 5; k++) layout.shapes.push({
+                type: 'line',
+                xref: 'x' + (j ? j + 1 : ''),
+                yref: 'y' + (j ? j + 1 : '') + ' domain',
+                x0: k * 20 + .5,
+                x1: k * 20 + .5,
+                y0: 0,
+                y1: 1,
+                line: {
+                    color: '#aaa',
+                    width: 1,
+                    dash: 'dot'
+                }
+            })
+    }
+    Plotly.newPlot(el, traces, layout, {
+        responsive: true,
+        displaylogo: false,
+        toImageButtonOptions: {
+            format: 'png',
+            scale: 2
+        }
+    })
+}
+
+function render() {
+    $('plots').innerHTML = '';
+    let tag = $('condition').value,
+        s = D[tag][+$('segment').value],
+        z = s.values,
+        n = z.length,
+        mode = $('mode').value,
+        w = +$('size').value,
+        off = +$('offset').value,
+        p = Math.max(1, +$('page').value || 1);
+    let ranges = [0, 1, 2, 3].map(j => {
+        let v = z.map(r => r[j]),
+            lo = Math.min(...v),
+            hi = Math.max(...v),
+            m = (hi - lo) * .05 || .01;
+        return [lo - m, hi + m]
+    });
+    let info =
+        `${tag} / ${s.id} / ${s.date} / ${n}건 / 입력 Excel ${s.rows[0]}–${s.rows[n-1]}. 동일 변수의 원시값 축은 해당 연속 구간 전체 범위로 고정. `;
+    if (mode === 'rolling') {
+        if (![20, 50, 100].includes(w)) {
+            w = 100;
+            $('size').value = '100'
+        }
+        let stats = s.rolling[w],
+            t = [];
+        for (let j = 0; j < 4; j++) {
+            t.push({
+                ...trace(z.map(r => r[j]), '원시값', null, colors[j]),
+                panel: j * 3
+            });
+            t.push({
+                ...trace(stats.median.map(r => r[j]), '과거 중앙값', null, '#111'),
+                panel: j * 3
+            });
+            t.push({
+                ...trace(stats.q1.map(r => r[j]), '과거 Q1', null, '#a0bacc'),
+                panel: j * 3
+            });
+            t.push({
+                ...trace(stats.q3.map(r => r[j]), '과거 Q3', null, '#a0bacc'),
+                panel: j * 3
+            });
+            t.push({
+                ...trace(stats.std.map(r => r[j]), '과거 표준편차', null, colors[j]),
+                panel: j * 3 + 1
+            });
+            t.push({
+                ...trace(stats.deviation.map(r => r[j]), '현재값 - 과거 중앙값', null, colors[j]),
+                panel: j * 3 + 2
+            })
+        }
+        chart(`${w}건 과거창 · 열: 원시값/중앙값/Q1/Q3 | 표준편차 | 편차 · 행: 가압력/전류/전압/통전시간`, t, 1100, 4, 3);
+        info += '현재값은 과거 기준에서 제외. 경계와 부족한 창은 결측. 시작점 이동·페이지는 이 보기에서 적용하지 않음.'
+    } else if (mode === 'nested') {
+        w = 100;
+        let total = Math.max(0, Math.floor((n - off) / 100));
+        p = Math.min(p, Math.max(1, total));
+        $('page').value = p;
+        let st = off + (p - 1) * 100;
+        if (total === 0) {
+            info += '완전한 100건 블록 없음.'
+        } else {
+            let v = z.slice(st, st + 100),
+                t = [];
+            for (let j = 0; j < 4; j++) {
+                t.push({
+                    ...trace(v.map(r => r[j]), names[j], null, colors[j]),
+                    panel: j
+                });
+            }
+            chart(`100건 전체 · 블록 ${p}/${total} · Excel ${s.rows[st]}–${s.rows[st+99]} · ${v.length}건`,
+                t, 800, 4, 1, ranges);
+            t = [];
+            let overlays = [],
+                centered = [];
+            for (let j = 0; j < 4; j++)
+                for (let k = 0; k < 5; k++) {
+                    let u = v.slice(k * 20, k * 20 + 20).map(r => r[j]),
+                        m = u.reduce((a, b) => a + b, 0) / 20;
+                    t.push({
+                        ...trace(u, `${names[j]} 20건 구간${k+1}`),
+                        panel: j * 5 + k
+                    });
+                    overlays.push({
+                        ...trace(u, `구간${k+1}`),
+                        panel: j
+                    });
+                    centered.push({
+                        ...trace(u.map(x => x - m), `구간${k+1}`),
+                        panel: j
+                    })
+                }
+            chart('개별 20건 5구간 · 열: 1~5 · 행: 가압력/전류/전압/통전시간', t, 1000, 4, 5, ranges);
+            chart('20건 5구간 중첩: 원시값 (마우스로 구간 확인)', overlays, 800, 4, 1, ranges);
+            chart('20건 5구간 중첩: 각 구간 평균 제거', centered, 800);
+            info += `완전한 100건 블록 ${total}개. 마지막 불완전 구간은 비중첩 보기에서 확인.`
+        }
+    } else {
+        if (mode === 'expanded' && ![200, 500].includes(w)) {
+            w = 200;
+            $('size').value = '200'
+        }
+        if (mode === 'blocks' && ![20, 50, 100].includes(w)) {
+            w = 100;
+            $('size').value = '100'
+        }
+        let total = Math.max(0, Math.ceil((n - off) / w)),
+            pages = Math.max(1, Math.ceil(total / 8));
+        p = Math.min(p, pages);
+        $('page').value = p;
+        for (let b = (p - 1) * 8; b < Math.min(p * 8, total); b++) {
+            let st = off + b * w,
+                v = z.slice(st, st + w),
+                t = [];
+            for (let j = 0; j < 4; j++) t.push({
+                ...trace(v.map(r => r[j]), names[j], v.map((_, i) => st + i + 1), colors[
+                j]),
+                panel: j
+            });
+            chart(`${w}건 분할 ${b+1}/${total} · ${v.length===w?'완전':'불완전'} ${v.length}건 · Excel ${s.rows[st]}–${s.rows[st+v.length-1]} · 반복 표시 ${s.repeat.slice(st,st+v.length).filter(Boolean).length}건`,
+                t, 750, 4, 1, ranges)
+        }
+        info +=
+            `총 ${total}블록 / ${pages}페이지 (페이지당 최대 8블록). ${mode==='expanded'?'100건에서 일반적인 20건 반복이 확인되지 않아 전체 확대 범위를 제공. 경계를 넘지 않으며 짧은 꼬리는 불완전 표시.':''}`
+    }
+    $('info').textContent = info;
+}
+$('condition').onchange = fill;
+['segment', 'mode', 'size', 'offset'].forEach(id => $(id).onchange = () => {
+    $('page').value = 1;
+    render()
+});
+$('draw').onclick = render;
+$('prev').onclick = () => {
+    $('page').value = Math.max(1, +$('page').value - 1);
+    render()
+};
+$('next').onclick = () => {
+    $('page').value = +$('page').value + 1;
+    render()
+};
+fill();
+</script></html>
