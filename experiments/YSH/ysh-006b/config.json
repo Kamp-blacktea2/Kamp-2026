@@ -1,0 +1,76 @@
+{
+  "experiment": "YSH-006B",
+  "seed": 42,
+  "null_repeats": 100,
+  "threads": 4,
+  "raw_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "settings": [
+    {
+      "name": "primary",
+      "width": 4,
+      "burn": 100,
+      "phase": 0
+    },
+    {
+      "name": "burn0",
+      "width": 4,
+      "burn": 0,
+      "phase": 0
+    },
+    {
+      "name": "burn32",
+      "width": 4,
+      "burn": 32,
+      "phase": 0
+    },
+    {
+      "name": "phase1",
+      "width": 4,
+      "burn": 100,
+      "phase": 1
+    },
+    {
+      "name": "phase2",
+      "width": 4,
+      "burn": 100,
+      "phase": 2
+    },
+    {
+      "name": "phase3",
+      "width": 4,
+      "burn": 100,
+      "phase": 3
+    },
+    {
+      "name": "width8",
+      "width": 8,
+      "burn": 100,
+      "phase": 0
+    },
+    {
+      "name": "width16",
+      "width": 16,
+      "burn": 100,
+      "phase": 0
+    }
+  ],
+  "thresholds": [
+    0.125,
+    0.25,
+    0.5
+  ],
+  "primary_threshold": 0.25,
+  "inputs": [
+    "data/Welding_Data_Set_01.xlsx",
+    "docs/data_dictionary.md",
+    "docs/공정방식.md",
+    "data/용접방식.png",
+    "requirements.txt",
+    "experiments/YSH/ysh-003/outputs/tables/segments.csv",
+    "experiments/YSH/ysh-001/outputs/exact_repeated_blocks.csv"
+  ],
+  "null_T": "within segment/region 32-row blocks, maximum discovery rate and context; reselect anchors",
+  "null_G": "each primary anchor and segment, fixed selected N, uniform priority nonoverlap",
+  "rate_denominator": "eligible search starts including low-change starts; exclude self overlap",
+  "joint_activity": "at least two common active variables; fixed all-view distance denominator"
+}

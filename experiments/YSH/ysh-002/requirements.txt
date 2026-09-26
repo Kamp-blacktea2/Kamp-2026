@@ -1,0 +1,3 @@
+# Shared environment; use the project setup-environment.ps1.
+# Historical execution versions remain in each experiment report/manifest.
+-r ../../../requirements.txt

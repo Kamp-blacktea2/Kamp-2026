@@ -1,0 +1,12 @@
+{
+  "raw": "F:/Kamp/data/Welding_Data_Set_01.xlsx",
+  "expected_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "segments": "F:/Kamp/experiments/YSH/ysh-002/outputs/tables/segments.csv",
+  "length_min": 2,
+  "length_max": 100,
+  "correlation_min": 0.7,
+  "shape_error_max": 0.75,
+  "amplitude_min": 0.5,
+  "amplitude_max": 2.0,
+  "output": "Detailed numeric Markdown report, no figures or HTML"
+}

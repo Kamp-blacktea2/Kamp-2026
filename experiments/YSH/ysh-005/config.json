@@ -1,0 +1,36 @@
+{
+  "raw_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "dictionary_sha256": "c5e1635cb81a44510e146cf71bd78321272cc28208ce26835586340309e2ba43",
+  "train_last_date": "2020-03-31",
+  "periods": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    16
+  ],
+  "phase_train_fraction": 0.6,
+  "surrogates": 100,
+  "block": 64,
+  "seeds": [
+    42,
+    7,
+    2026
+  ],
+  "force_thresholds": [
+    2.8,
+    3.0,
+    3.2
+  ],
+  "threads": 4,
+  "ae_epochs": 50,
+  "ae_batch": 64,
+  "ae_lr": 0.01,
+  "ae_std_multiplier": 8,
+  "if_trees": 300,
+  "if_quantiles": [
+    0.95,
+    0.99
+  ]
+}

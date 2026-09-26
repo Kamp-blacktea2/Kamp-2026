@@ -47,3 +47,24 @@ outputs/tables/*
 # 예: !docs/examples/public_sample.csv (승인된 파일에 한해서 활성화)
 # 무시된 부모 폴더 안의 파일은 부모 폴더도 명시적으로 허용해야 함.
 # 광범위한 예외나 git add -f 대신, 허용 이유를 이곳과 PR에 기록할 것.
+
+# Legacy local dependency folders are never tracked.
+**/.deps/
+
+# Local source workbooks; keep documentation and the process diagram in data/.
+/data/**/*.xlsx
+/data/**/*.xls
+/data/**/*.xlsm
+/data/**/*.xlsb
+
+# Regenerable experiment outputs (CSV, JSON, plots, fitted arrays, checkpoints).
+# Keep experiment code, config.json, plans, and Markdown reports tracked.
+/experiments/**/outputs/
+*.npy
+*.npz
+
+# Machine-specific environment check output and tool caches.
+/docs/environment_validation.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

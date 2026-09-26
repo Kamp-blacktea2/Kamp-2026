@@ -1,0 +1,14 @@
+# Direct dependencies for the shared KAMP environment (Python 3.13, CPU).
+# Edit this file, then compile requirements.txt with uv; see docs/environment.md.
+# Core numerical/model versions preserve the YSH-004/005 execution environment.
+numpy==2.2.4
+pandas==2.2.3
+scipy==1.15.2
+scikit-learn==1.6.1
+openpyxl==3.1.5
+ruptures==1.1.10
+torch==2.14.0+cpu
+joblib==1.4.2
+threadpoolctl==3.6.0
+matplotlib==3.10.1
+plotly==6.9.0
