@@ -42,6 +42,9 @@ uv pip sync requirements.txt --python .venv/Scripts/python.exe --torch-backend c
 
 일반 분석 스크립트는 패키지를 자동 설치하지 않는다. 의존성이 추가되거나 변경되면 공용 환경을 동기화하고 필요한 호환성 검사를 수행한다. uv 캐시는 유지하며 실험별로 패키지 사본을 만들지 않는다.
 
+## YSH-007 시각 검토 notebook
+
+[review_ysh007.ipynb](../experiments/YSH/ysh-007/review_ysh007.ipynb)은 기존 CSV 산출물과 Raw4 원본 값만 읽는다. 모델 학습·설정 선택은 실행하지 않는다. VS Code 등의 Jupyter notebook 화면에서 프로젝트 .venv Python 커널을 선택해 실행한다. 공용 requirements에 ipykernel·nbformat·plotly가 포함되어 있다. 산출물 outputs는 Git에서 제외되므로 이후 같은 실행을 다시 검토하려면 로컬 CSV를 보존해야 한다.
 ## 기존 실험의 환경 이력
 
 - YSH-004/005의 핵심 수치·모델 라이브러리는 기존 실행 버전을 유지했다.

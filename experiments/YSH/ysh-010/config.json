@@ -1,0 +1,41 @@
+{
+  "experiment": "YSH-010",
+  "source_sha256": "917dac7251795bb333970529f3c5a4b6c780874af83c2f1b08c57a9627e4e027",
+  "kamp_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "source_rows": 4186,
+  "source_samples": 495,
+  "kamp_rows": 11939,
+  "seeds": [42, 7, 2026],
+  "bootstrap_seed": 42,
+  "bootstrap_draws": 1000,
+  "folds": 5,
+  "logistic": {
+    "C": 1.0,
+    "class_weight": "balanced",
+    "max_iter": 5000
+  },
+  "random_forest": {
+    "n_estimators": 500,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": 4
+  },
+  "ridge_alpha": 1.0,
+  "gate": {
+    "roc_auc_min_exclusive": 0.60,
+    "balanced_accuracy_min_exclusive": 0.55,
+    "group_auc_drop_max": 0.15,
+    "regression_r2_min_exclusive": 0.0,
+    "regression_spearman_min_exclusive": 0.20,
+    "regression_dummy_mae_improvement_min": 0.05,
+    "stability_jaccard_median_min": 0.50,
+    "stability_spearman_median_min": 0.70
+  },
+  "repeat298": [
+    ["occ_20200325", "2020-03-25", 1879, 2176],
+    ["occ_20200327", "2020-03-27", 4693, 4990],
+    ["occ_20200331", "2020-03-31", 7803, 8100],
+    ["occ_20200403", "2020-04-03", 10879, 11176]
+  ]
+}
