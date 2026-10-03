@@ -65,6 +65,7 @@ outputs/tables/*
 
 # Machine-specific environment check output and tool caches.
 /docs/environment_validation.json
+/.tmp.driveupload/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

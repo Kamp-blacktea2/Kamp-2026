@@ -1,0 +1,45 @@
+{
+  "experiment": "YSH-011",
+  "source_sha256": "917dac7251795bb333970529f3c5a4b6c780874af83c2f1b08c57a9627e4e027",
+  "kamp_sha256": "d514d6aaa121630c04d7d51c97a56025e78e2c86868813f7722ba5db922c1f33",
+  "source_rows": 4186,
+  "source_samples": 495,
+  "excluded_sample_ids": [250, 252],
+  "model_samples": 493,
+  "category_counts": {
+    "Good": 441,
+    "Bad": 21,
+    "Explode": 31
+  },
+  "kamp_rows": 11939,
+  "kamp_unique_raw4": 1574,
+  "folds": 5,
+  "seeds": [7, 42, 2026],
+  "model_random_state": 42,
+  "bootstrap_seed": 42,
+  "bootstrap_draws": 2000,
+  "top_k": [0.01, 0.05, 0.1],
+  "isolation_forest": {
+    "n_estimators": 500,
+    "max_samples": "auto",
+    "contamination": "auto",
+    "random_state": 42,
+    "n_jobs": 1
+  },
+  "gmm": {
+    "k_min": 1,
+    "k_max": 6,
+    "covariance_type": "full",
+    "reg_covar": 1e-6,
+    "n_init": 10,
+    "random_state": 42
+  },
+  "lof": {
+    "n_neighbors": 20,
+    "metric": "euclidean"
+  },
+  "mcd": {
+    "support_fraction": null,
+    "random_state": 42
+  }
+}

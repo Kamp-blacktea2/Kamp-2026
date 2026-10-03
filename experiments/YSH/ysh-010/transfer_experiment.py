@@ -31,6 +31,7 @@ from common import (
     classification_metrics,
     ensure_output_dirs,
     episode_ids,
+    json_default,
     load_kamp,
     load_source_raw,
     optimal_bacc_threshold,
@@ -43,6 +44,7 @@ from common import (
     sha256,
     source_transform_apply,
     source_transform_fit,
+    source_model_cohort,
     write_csv,
     write_json,
 )
@@ -207,6 +209,32 @@ def normalized_classification_cv(source: pd.DataFrame, config: dict):
                             fold_score = np.log(np.clip(probability, 1e-9, 1 - 1e-9) / np.clip(1 - probability, 1e-9, 1))
                         score_sum[test] += fold_score
                         score_count[test] += 1
+                    if invalid_folds:
+                        metrics.append(
+                            {
+                                "model": model_name,
+                                "representation": representation,
+                                "mapping": mapping,
+                                "split": split,
+                                "invalid_folds": invalid_folds,
+                                "samples": len(source),
+                                "roc_auc": np.nan,
+                                "pr_auc": np.nan,
+                                "balanced_accuracy": np.nan,
+                                "f1": np.nan,
+                                "recall": np.nan,
+                                "precision": np.nan,
+                                "specificity": np.nan,
+                                "brier": np.nan,
+                                "tn": np.nan,
+                                "fp": np.nan,
+                                "fn": np.nan,
+                                "tp": np.nan,
+                                "threshold": 0.0,
+                                "invalid_reason": "non_positive_good_iqr_in_at_least_one_fold",
+                            }
+                        )
+                        continue
                     if np.any(score_count == 0):
                         raise AssertionError(f"Missing OOF score: {split}/{representation}/{mapping}/{model_name}")
                     score = score_sum / score_count
@@ -351,10 +379,15 @@ def regression_cv(source: pd.DataFrame, config: dict):
                         pred_sum = np.zeros(len(subset))
                         dummy_sum = np.zeros(len(subset))
                         pred_count = np.zeros(len(subset), dtype=int)
+                        invalid_folds = 0
                         for _, _, train, test in splits:
-                            transform = source_transform_fit(
-                                x[train], subset.iloc[train]["abnormal"].to_numpy(int), representation
-                            )
+                            try:
+                                transform = source_transform_fit(
+                                    x[train], subset.iloc[train]["abnormal"].to_numpy(int), representation
+                                )
+                            except ValueError:
+                                invalid_folds += 1
+                                continue
                             x_train = source_transform_apply(x[train], transform)
                             x_test = source_transform_apply(x[test], transform)
                             if model_name == "ridge":
@@ -371,6 +404,26 @@ def regression_cv(source: pd.DataFrame, config: dict):
                             pred_sum[test] += model.predict(x_test)
                             dummy_sum[test] += dummy.predict(x_test)
                             pred_count[test] += 1
+                        if invalid_folds:
+                            metric_rows.append(
+                                {
+                                    "target": target,
+                                    "model": model_name,
+                                    "representation": representation,
+                                    "mapping": mapping,
+                                    "split": split,
+                                    "samples": len(subset),
+                                    "mae": np.nan,
+                                    "rmse": np.nan,
+                                    "r2": np.nan,
+                                    "spearman": np.nan,
+                                    "dummy_mae": np.nan,
+                                    "dummy_mae_improvement": np.nan,
+                                    "invalid_folds": invalid_folds,
+                                    "invalid_reason": "non_positive_good_iqr_in_at_least_one_fold",
+                                }
+                            )
+                            continue
                         prediction = pred_sum / pred_count
                         dummy_prediction = dummy_sum / pred_count
                         metrics = regression_metrics(y, prediction, dummy_prediction)
@@ -403,9 +456,8 @@ def regression_cv(source: pd.DataFrame, config: dict):
     return pd.concat(prediction_rows, ignore_index=True), pd.DataFrame(metric_rows)
 
 
-def gate_decisions(metrics: pd.DataFrame, regression: pd.DataFrame, config: dict):
+def gate_decisions(metrics: pd.DataFrame, regression: pd.DataFrame, config: dict, prevalence: float):
     gate = config["gate"]
-    prevalence = 52 / 495
     logistic = metrics.loc[metrics["model"].eq("logistic")].copy()
     wide = logistic.pivot_table(
         index=["representation", "mapping"],
@@ -415,23 +467,66 @@ def gate_decisions(metrics: pd.DataFrame, regression: pd.DataFrame, config: dict
     )
     rows = []
     combo_status = {}
-    for representation, mapping in wide.index:
-        values = wide.loc[(representation, mapping)]
-        gate_a = (
-            values[("roc_auc", "stratified")] > gate["roc_auc_min_exclusive"]
-            and values[("pr_auc", "stratified")] > prevalence
-            and values[("balanced_accuracy", "stratified")] > gate["balanced_accuracy_min_exclusive"]
-        )
-        auc_drop = values[("roc_auc", "stratified")] - values[("roc_auc", "group")]
-        gate_b = gate_a and (
-            values[("roc_auc", "group")] > gate["roc_auc_min_exclusive"]
-            and values[("pr_auc", "group")] > prevalence
-            and values[("balanced_accuracy", "group")] > gate["balanced_accuracy_min_exclusive"]
-            and auc_drop <= gate["group_auc_drop_max"]
-        )
-        combo_status[(representation, mapping)] = {"A": gate_a, "B": gate_b, "auc_drop": auc_drop}
-        rows.extend(
-            [
+    for representation in REPRESENTATIONS:
+        for mapping in MAPPINGS:
+            key = (representation, mapping)
+            if key not in wide.index:
+                combo_status[key] = {"A": False, "B": False, "auc_drop": None}
+                rows.extend(
+                    [
+                        {
+                            "gate": gate_name,
+                            "scope": f"{representation}_{mapping}",
+                            "status": "fail",
+                            "metric_summary": "invalid_non_positive_good_iqr_or_missing_oof",
+                            "consequence": consequence,
+                        }
+                        for gate_name, consequence in [
+                            ("A", "no_kamp_normalized_scoring"),
+                            ("B", "recipe_dependent_or_weak"),
+                        ]
+                    ]
+                )
+                continue
+            values = wide.loc[key]
+            required = [
+                (metric, split)
+                for metric in ["roc_auc", "pr_auc", "balanced_accuracy"]
+                for split in ["stratified", "group"]
+            ]
+            if any(pd.isna(values.get(item, np.nan)) for item in required):
+                combo_status[key] = {"A": False, "B": False, "auc_drop": None}
+                rows.extend(
+                    [
+                        {
+                            "gate": gate_name,
+                            "scope": f"{representation}_{mapping}",
+                            "status": "fail",
+                            "metric_summary": "invalid_non_positive_good_iqr_or_missing_oof",
+                            "consequence": consequence,
+                        }
+                        for gate_name, consequence in [
+                            ("A", "no_kamp_normalized_scoring"),
+                            ("B", "recipe_dependent_or_weak"),
+                        ]
+                    ]
+                )
+                continue
+            gate_a = (
+                values[("roc_auc", "stratified")] > gate["roc_auc_min_exclusive"]
+                and values[("pr_auc", "stratified")] > prevalence
+                and values[("balanced_accuracy", "stratified")] > gate["balanced_accuracy_min_exclusive"]
+            )
+            auc_drop = values[("roc_auc", "stratified")] - values[("roc_auc", "group")]
+            gate_b = gate_a and (
+                values[("roc_auc", "group")] > gate["roc_auc_min_exclusive"]
+                and values[("pr_auc", "group")] > prevalence
+                and values[("balanced_accuracy", "group")] > gate["balanced_accuracy_min_exclusive"]
+                and auc_drop <= gate["group_auc_drop_max"]
+            )
+            combo_status[key] = {"A": gate_a, "B": gate_b, "auc_drop": auc_drop}
+            rows.extend(
+                [
                 {
                     "gate": "A",
                     "scope": f"{representation}_{mapping}",
@@ -446,8 +541,8 @@ def gate_decisions(metrics: pd.DataFrame, regression: pd.DataFrame, config: dict
                     "metric_summary": f"group_auc={values[('roc_auc','group')]:.6f};pr={values[('pr_auc','group')]:.6f};bacc0={values[('balanced_accuracy','group')]:.6f};auc_drop={auc_drop:.6f}",
                     "consequence": "eligible_for_gate_C" if gate_b else "recipe_dependent_or_weak",
                 },
-            ]
-        )
+                ]
+            )
     family_counts = {
         representation: sum(combo_status[(representation, mapping)]["B"] for mapping in MAPPINGS)
         for representation in REPRESENTATIONS
@@ -472,7 +567,8 @@ def gate_decisions(metrics: pd.DataFrame, regression: pd.DataFrame, config: dict
     regression_status = {}
     for row in ridge_group.itertuples(index=False):
         passed = (
-            row.r2 > gate["regression_r2_min_exclusive"]
+            np.isfinite(row.r2)
+            and row.r2 > gate["regression_r2_min_exclusive"]
             and row.spearman > gate["regression_spearman_min_exclusive"]
             and row.dummy_mae_improvement >= gate["regression_dummy_mae_improvement_min"]
         )
@@ -585,7 +681,7 @@ def figure_source_map(source: pd.DataFrame) -> None:
     fig.colorbar(scatter, ax=axes[2], label="N")
     for axis in axes:
         axis.grid(alpha=0.18)
-    fig.suptitle("Figure 2. External RSW source quality map (495 weld samples)", fontsize=14)
+    fig.suptitle("Figure 2. External RSW source quality map (493 model samples)", fontsize=14)
     fig.tight_layout(rect=[0, 0, 1, 0.94])
     fig.savefig(FIG / "figure2_source_quality_map.png", bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -654,7 +750,7 @@ def figure_quality_outputs(source: pd.DataFrame) -> None:
 def main() -> None:
     config = read_config()
     ensure_output_dirs()
-    source = aggregate_source(load_source_raw(config))
+    source = source_model_cohort(aggregate_source(load_source_raw(config)), config)
 
     normalized_predictions, normalized_metrics, parameters, split_manifest = normalized_classification_cv(source, config)
     baseline_predictions, baseline_metrics = raw_baseline_cv(source, config)
@@ -662,7 +758,7 @@ def main() -> None:
     all_metrics = pd.concat([normalized_metrics, baseline_metrics], ignore_index=True, sort=False)
     regression_predictions, regression_metric_table = regression_cv(source, config)
     gates, gate_summary, combo_status, regression_status = gate_decisions(
-        all_metrics, regression_metric_table, config
+        all_metrics, regression_metric_table, config, float(source["abnormal"].mean())
     )
     thresholds = threshold_table(all_predictions, combo_status)
     references = source_reference_table(source)
@@ -682,7 +778,7 @@ def main() -> None:
     figure_quality_outputs(source)
 
     write_json(gate_summary, "source_gate_summary.json")
-    print(json.dumps(gate_summary, ensure_ascii=False, indent=2))
+    print(json.dumps(gate_summary, ensure_ascii=False, indent=2, default=json_default))
 
 
 if __name__ == "__main__":
