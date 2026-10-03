@@ -187,6 +187,37 @@ def aggregate_source(raw: pd.DataFrame) -> pd.DataFrame:
     return sample.reset_index().rename(columns={"Sample ID": "sample_id"})
 
 
+def source_model_cohort(source: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """Return the approved 493-sample cohort without changing the 495-row audit."""
+    excluded = sorted(int(value) for value in config["excluded_sample_ids"])
+    observed_zero_valid = sorted(
+        source.loc[
+            source["current_valid_rows"].eq(0) | source["force_valid_rows"].eq(0),
+            "sample_id",
+        ].astype(int).tolist()
+    )
+    if observed_zero_valid != excluded:
+        raise ValueError(
+            f"Zero-valid sensor IDs {observed_zero_valid} do not match approved exclusions {excluded}"
+        )
+    cohort = source.loc[~source["sample_id"].isin(excluded)].copy().reset_index(drop=True)
+    required = [
+        "pressure_bar",
+        "welding_time_ms",
+        "current_min_ka",
+        "current_mean_ka",
+        "current_max_ka",
+    ]
+    if cohort[required].isna().any().any():
+        raise ValueError("Model cohort contains missing common process features")
+    if len(cohort) != config["model_samples"]:
+        raise ValueError(f"Unexpected model cohort size: {len(cohort)}")
+    counts = cohort["abnormal"].value_counts().to_dict()
+    if counts.get(0, 0) != config["model_good"] or counts.get(1, 0) != config["model_abnormal"]:
+        raise ValueError(f"Unexpected model class counts: {counts}")
+    return cohort
+
+
 def load_kamp(config: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
     digest = sha256(KAMP_PATH)
     if digest != config["kamp_sha256"]:

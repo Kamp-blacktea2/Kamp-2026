@@ -19,6 +19,7 @@ from common import (
     read_config,
     sha256,
     source_consistency,
+    source_model_cohort,
     write_csv,
     write_json,
 )
@@ -37,11 +38,8 @@ def main() -> None:
         source["current_valid_rows"].eq(0) | source["force_valid_rows"].eq(0),
         "sample_id",
     ].astype(int).tolist()
-    stage0_status = (
-        "stage0_fail_source_sensor_valid_count_zero"
-        if zero_valid_sensor_ids
-        else "stage0_pass"
-    )
+    model_source = source_model_cohort(source, config)
+    stage0_status = "stage0_pass_with_approved_493_sample_exclusion"
 
     category_counts = source.groupby("category").size().to_dict()
     communication = source_raw.loc[
@@ -57,7 +55,7 @@ def main() -> None:
         consistency["PullTest (N)_nunique"].gt(1), "Sample ID"
     ].astype(int).tolist()
 
-    condition = source.groupby(
+    condition = model_source.groupby(
         ["pressure_psi", "welding_time_ms", "angle_deg", "condition_group"], sort=True
     ).agg(
         samples=("sample_id", "size"),
@@ -159,6 +157,10 @@ def main() -> None:
         "source_samples_with_valid_current_and_force": int(
             (~source["sample_id"].isin(zero_valid_sensor_ids)).sum()
         ),
+        "approved_excluded_sample_ids": config["excluded_sample_ids"],
+        "source_model_samples": len(model_source),
+        "source_model_good": int(model_source["abnormal"].eq(0).sum()),
+        "source_model_abnormal": int(model_source["abnormal"].eq(1).sum()),
         "thickness_inconsistent_sample_ids": thickness_inconsistent,
         "pulltest_inconsistent_sample_ids": pull_inconsistent,
         "condition_groups": int(source["condition_group"].nunique()),
@@ -174,23 +176,22 @@ def main() -> None:
     write_json(audit, "source_data_audit.json")
     write_csv(consistency, "source_sample_consistency_audit.csv")
     write_csv(source, "source_weld_level_495.csv")
+    write_csv(model_source, "source_model_cohort_493.csv")
     write_csv(condition, "source_condition_quality_table.csv")
     write_csv(overlap, "domain_overlap_summary.csv")
     write_csv(absolute_rows, "absolute_transfer_negative_control.csv")
-    if zero_valid_sensor_ids:
-        gate_rows = pd.DataFrame(
-            [
-                {
-                    "gate": gate,
-                    "scope": "global",
-                    "status": "not_evaluated",
-                    "metric_summary": "stage0_fail_source_sensor_valid_count_zero",
-                    "consequence": "model_and_transfer_not_run",
-                }
-                for gate in ["A", "B", "C", "regression", "D", "E"]
-            ]
-        )
-        write_csv(gate_rows, "transfer_gate_decisions.csv")
+    write_csv(
+        pd.DataFrame(
+            [{
+                "gate": "Stage0",
+                "scope": "source_model_cohort",
+                "status": "pass",
+                "metric_summary": "495_audited;excluded_ids=250,252;model_n=493;good=441;abnormal=52",
+                "consequence": "source_modeling_allowed",
+            }]
+        ),
+        "transfer_gate_decisions.csv",
+    )
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.8))
     plot_specs = [
@@ -202,7 +203,7 @@ def main() -> None:
     for axis, (feature, source_values, kamp_series, label) in zip(axes, plot_specs):
         axis.boxplot(
             [source_values.dropna(), kamp_series.dropna()],
-            tick_labels=[f"External\n(n={len(source_values)})", f"KAMP\n(n={len(kamp_series)})"],
+            tick_labels=[f"External\n(n={source_values.notna().sum()})", f"KAMP\n(n={kamp_series.notna().sum()})"],
             patch_artist=True,
             boxprops={"facecolor": colors[0], "alpha": 0.35},
             medianprops={"color": "black"},
@@ -232,24 +233,6 @@ def main() -> None:
     fig.savefig(FIG / "figure1_absolute_domain_mismatch_negative_control.png", bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
-    """
-    manifest = {
-        "inputs": {
-            str(SOURCE_PATH.relative_to(SOURCE_PATH.parents[1])).replace("\", "/"): sha256(SOURCE_PATH),
-            str(KAMP_PATH.relative_to(KAMP_PATH.parents[1])).replace("\", "/"): sha256(KAMP_PATH),
-        },
-        "stage0_outputs": [
-            "source_data_audit.json",
-            "source_sample_consistency_audit.csv",
-            "source_weld_level_495.csv",
-            "source_condition_quality_table.csv",
-            "domain_overlap_summary.csv",
-            "absolute_transfer_negative_control.csv",
-            "transfer_gate_decisions.csv",
-            "figures/figure1_absolute_domain_mismatch_negative_control.png",
-        ],
-    }
-    """
     manifest = {
         "inputs": {
             SOURCE_PATH.relative_to(SOURCE_PATH.parents[1]).as_posix(): sha256(SOURCE_PATH),
@@ -259,15 +242,16 @@ def main() -> None:
             "source_data_audit.json",
             "source_sample_consistency_audit.csv",
             "source_weld_level_495.csv",
+            "source_model_cohort_493.csv",
             "source_condition_quality_table.csv",
             "domain_overlap_summary.csv",
+            "absolute_transfer_negative_control.csv",
+            "transfer_gate_decisions.csv",
             "figures/figure1_absolute_domain_mismatch_negative_control.png",
         ],
     }
     write_json(manifest, "input_manifest.json")
     print(json.dumps(audit, ensure_ascii=False, indent=2))
-    if zero_valid_sensor_ids:
-        raise SystemExit(2)
 
 
 if __name__ == "__main__":

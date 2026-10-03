@@ -82,4 +82,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    from verify_completed import main as completed_main
+
+    completed_main()
